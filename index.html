@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quick Diablo Trade Helper</title>
+  <!-- Google Font for a futuristic look -->
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <!-- jQuery CDN -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <style>
+    /* Reset & Base */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: #000;
+      color: #fff;
+      padding: 20px;
+      position: relative;
+      min-height: 100vh;
+    }
+    /* Season Buttons (top-most) */
+    .season-buttons {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .season-buttons button {
+      background: transparent;
+      border: 2px solid;
+      padding: 10px 20px;
+      font-size: 1em;
+      margin: 0 5px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    /* Softcore buttons: green */
+    .season-buttons button.softcore {
+      border-color: #33cc33;
+      color: #33cc33;
+    }
+    .season-buttons button.softcore.selected {
+      background: #33cc33;
+      color: #fff;
+    }
+    /* Hardcore buttons: red */
+    .season-buttons button.hardcore {
+      border-color: #ff5555;
+      color: #ff5555;
+    }
+    .season-buttons button.hardcore.selected {
+      background: #ff5555;
+      color: #fff;
+    }
+    /* Mode Buttons */
+    .mode-buttons {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .mode-buttons button {
+      background: transparent;
+      border: 2px solid;
+      padding: 15px 30px;
+      font-size: 1.5em;
+      margin: 0 10px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    /* Buy mode button (blue) */
+    #modeBuy {
+      border-color: #00aaff;
+      color: #00aaff;
+    }
+    #modeBuy.selected {
+      background: #00aaff;
+      color: #fff;
+    }
+    /* Sell mode button (red) */
+    #modeSell {
+      border-color: #ff5555;
+      color: #ff5555;
+    }
+    #modeSell.selected {
+      background: #ff5555;
+      color: #fff;
+    }
+    /* Main interface container */
+    #interface { margin: 0 auto; max-width: 1000px; }
+    /* Top-level Submenu (categories) */
+    .sub-menu {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .sub-menu button {
+      background: transparent;
+      border: 2px solid;
+      padding: 8px 15px;
+      margin: 5px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+    /* In buy mode, submenu uses blue */
+    .buy-mode .sub-menu button {
+      border-color: #00aaff;
+      color: #00aaff;
+    }
+    .buy-mode .sub-menu button.selected {
+      background: #00aaff;
+      color: #fff;
+    }
+    /* In sell mode, submenu uses red */
+    .sell-mode .sub-menu button {
+      border-color: #ff5555;
+      color: #ff5555;
+    }
+    .sell-mode .sub-menu button.selected {
+      background: #ff5555;
+      color: #fff;
+    }
+    /* Panels container – each category panel */
+    .panels-container .cat-panel {
+      display: none;
+      border: 2px solid;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 15px;
+      background: #111;
+      min-height: 300px;
+    }
+    /* Extra bottom padding so content isn’t hidden behind fixed Submit */
+    .panels-container { padding-bottom: 100px; }
+    .cat-panel h2 {
+      text-align: center;
+      margin-bottom: 10px;
+      text-shadow: 0 0 8px currentColor;
+    }
+    /* Option Items */
+    .item {
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      border-bottom: 1px solid;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .item:hover { background: rgba(255,255,255,0.1); }
+    .item:last-child { border-bottom: none; }
+    .item input[type="checkbox"] {
+      margin-right: 10px;
+      cursor: pointer;
+    }
+    /* Use label for click association */
+    .item label {
+      flex-grow: 1;
+      user-select: none;
+      cursor: pointer;
+    }
+    /* Checkbox accent by mode */
+    .buy-mode input[type="checkbox"] { accent-color: #00aaff; }
+    .sell-mode input[type="checkbox"] { accent-color: #ff5555; }
+    /* Styled Arrow Button */
+    .item button.arrow {
+      background: #333;
+      border: 2px solid;
+      border-radius: 5px;
+      padding: 4px 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.3s;
+      margin-left: 5px;
+    }
+    .buy-mode .item button.arrow { border-color: #00aaff; color: #00aaff; }
+    .sell-mode .item button.arrow { border-color: #ff5555; color: #ff5555; }
+    .item button.arrow:hover { transform: scale(1.2); background: rgba(255,255,255,0.1); }
+    /* Fixed Submit Button at Bottom Right – 4× bigger */
+    .submit-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 40px 80px;
+      background: transparent;
+      border: 2px solid;
+      font-size: 2em;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+      z-index: 1000;
+    }
+    .buy-mode .submit-btn { border-color: #00aaff; color: #00aaff; }
+    .buy-mode .submit-btn:hover { background: #00aaff; color: #fff; }
+    .sell-mode .submit-btn { border-color: #ff5555; color: #ff5555; }
+    .sell-mode .submit-btn:hover { background: #ff5555; color: #fff; }
+    /* Equipment Panel – Equipment appears only in Buy mode */
+    .equip-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .equip-col {
+      border: 2px solid;
+      border-radius: 5px;
+      padding: 5px;
+      background: #111;
+    }
+    .equip-col h3 {
+      text-align: center;
+      margin-bottom: 5px;
+      border-bottom: 1px solid;
+      padding-bottom: 3px;
+    }
+    .buy-mode .cat-panel, .buy-mode .equip-col h3, .buy-mode .equip-col { border-color: #00aaff; }
+    .sell-mode .cat-panel, .sell-mode .equip-col h3, .sell-mode .equip-col { border-color: #ff5555; }
+  </style>
+</head>
+<body>
+  <!-- Top-level Season Buttons -->
+  <div class="season-buttons">
+    <button id="seasonSoftcore" class="season-btn softcore selected">season softcore</button>
+    <button id="seasonHardcore" class="season-btn hardcore">season hardcore</button>
+    <button id="eternalSoftcore" class="season-btn softcore">eternal softcore</button>
+    <button id="eternalHardcore" class="season-btn hardcore">eternal hardcore</button>
+  </div>
+  
+  <!-- Mode Buttons: Buy and Sell -->
+  <div class="mode-buttons">
+    <button id="modeBuy" class="mode-btn selected">Buy</button>
+    <button id="modeSell" class="mode-btn">Sell</button>
+  </div>
+  
+  <!-- Main Interface Container (dynamically built) -->
+  <div id="interface" class="buy-mode"></div>
+  
+  <!-- JSON Data for Options (Elixir and Incense remain in the JSON but will not be used) -->
+  <script>
+    var optionsData = {
+      "bossMaterials": ["Distilled Fear","Exquisite Blood","Living Steel","Malignant Heart","Mucus-Slick Egg","Pincushioned Doll"],
+      "gem": ["Grand Amethyst","Grand Diamond","Grand Emerald","Grand Sapphire","Grand Skull","Grand Topaz","Grand Ruby"],
+      "rune": ["Ahu","Bac","Ceh","Cem","Chac","Cir","Eom","Feo","Gar","Igni","Jah","Kaa","Kry","Lac","Lith","Lum","Met","Moni","Mot","Nagu","Neo","Ner","Noc","Ohm","Ono","Poc","Qax","Qua","Que","Tal","Tam","Teb","Tec","Thul","Ton","Tun","Tzic","Ur","Vex","Wat","Xal","Xan","Xol","Yax","Yom","Yul","Zan","Zec"],
+      "summonSets": ["Andariel Set","Duriel Set","Grigoire Set","Lord Zir Set","The Beast in the Ice Set","Varshan Set"],
+      "equipment": {
+        "type": ["amulet","axe","boots","bow","chestarmor","crossbow","dagger","focus","glaive","gloves","helm","mace","pants","polearm","quarterstaff","ring","scythe","shield","staff","sword","totem","twohandedaxe","twohandedmace","twohandedscythe","twohandedsword","wand"],
+        "rarities": ["unique", "legendary"],
+        "unique": [
+          "100,000 Steps","Airidah's Inexorable Will","Ancients' Oath","Arreat's Bearing","Asheara's Khanjar",
+          "Assassin's Stride","Axial Conduit","Azurewrath","band of first breath","Banished Lord's Talisman",
+          "Battle Trance","Beastfall Boots","Björnfangs Tusks","Black River","Blood Artisan's Cuirass",
+          "Blood Moon Breeches","Bloodless Scream","Blue Rose","Condemnation","Cowl of the Nameless",
+          "craze of the dead god","Crown Of Lucion","Cruor's Embrace","Deathless Visage","Deathspeaker's Pendant",
+          "Dolmen Stone","Eaglehorn","Earthbreaker","Ebonpiercer","Endurant Faith","Esadora's Overflowing Cameo",
+          "Esu's Heirloom","Eyes in the Dark","Fields of Crimson","Fists of Fate","Flamescar","Flameweaver",
+          "Fleshrender","Flickerstep","Fractured Winterglass","Frostburn","Gloves of the Illuminator",
+          "Godslayer Crown","Gohr's Devastating Grips","Grasp of Shadow","Greatstaff of the Crone",
+          "Greaves of the Empty Tomb","harmony of ebewaka","Hellhammer","Howl from Below","Hunter's Zenith",
+          "Iceheart Brais","Indira's Memory","Insatiable Fury","jacinth shell","Kessime's Legacy","Lidless Wall",
+          "Locran's Talisman","loyaltys mantle","Mad Wolf's Glee","Malefic Crescent","Mantle of Mountain's Fury",
+          "MjÖlnic Ryng","Mother's Embrace","Mutilator Plate","Okun's Catalyst","Overkill","Paingorger's Gauntlets",
+          "Path Of Tragoul","Peacemonger's Signet","Penitent Greaves","Pitfighter's Gull","protection of the prime",
+          "Rage of Harrogath","Raiment of the Infinite","Rakanoths Wake","Ramaladni's Magnum Opus","Razorplate",
+          "Ring of Mendeln","Ring of Red Furor","ring of the midday hunt","ring of the midnight sun",
+          "Ring of the Ravenous","Ring of the Sacrilegious Soul","ring of writhing moon","rod of kepeleke",
+          "Saboteur's Signet","Scorn Of The Earth","Scoundrel's Kiss","Scoundrel's Leathers","sepazontec",
+          "Shard Of Verathiel","Shroud Of Khanduras","sidhe bindings","Skyhunter","Soulbrand","Staff of Endless Rage",
+          "Staff of Lam Esen","Starfall Coronet","stone of vehemen","storms companion","strike of stormhorn",
+          "Sunstained War-Crozier","Tal Rasha's Iridescent Loop","Tassets of the Dawning Sky","Temerity","Tempest Roar",
+          "The Basilisk","The Butcher's Cleaver","The Mortacrux","The Oculus","The Third Blade","The Umbracrux",
+          "the unmaker","Tibault's Will","Tuskhelm of Joritz the Mighty","Twin Strikes","ugly bastard helm",
+          "Unbroken Chain","Unsung Ascetic's Wraps","Vasily's Prayer","Vox Omnium","Waxing Gibbous",
+          "Wildheart Hunger","Windforce","Word of Hakan","wound drinker","Writhing Band of Trickery","wushe nak pa",
+          "X'Fal's Corroded Signet","Yen's Blessing"
+        ]
+      }
+    };
+  </script>
+  
+  <!-- Build the Dynamic Interface and Wire Up Functionality -->
+  <script>
+    // Mapping from our category keys to the diablo.trade query parameter names.
+    var paramMapping = {
+      "bossMaterials": "boss_material",
+      "gem": "gem",
+      "rune": "rune",
+      "summonSets": "summon_set",
+      "equipment_type": "equipment",
+      "rarity": "rarity",
+      "equipment_unique": "uniqueItem"
+    };
+
+    // Global state for preserving selections and current category when switching modes.
+    var currentMode = "buy";
+    var modeStates = {
+      "buy": { selectedCategory: "bossMaterials", selections: {} },
+      "sell": { selectedCategory: "bossMaterials", selections: {} }
+    };
+
+    // Special formatting for unique items.
+    function formatUniqueItem(text) {
+      text = text.toLowerCase().trim();
+      if(text === "100,000 steps") {
+        return "h-thousand-steps";
+      }
+      text = text.replace(/['",]/g, "");
+      text = text.replace(/\s+/g, "-");
+      return text;
+    }
+
+    // Store current mode state from the DOM.
+    function storeState(mode) {
+      var state = { selectedCategory: "", selections: {} };
+      var $panel = $(".cat-panel:visible");
+      if($panel.length > 0) {
+        var id = $panel.attr("id"); // e.g., "buy_bossMaterials"
+        state.selectedCategory = id.split("_")[1];
+      } else {
+        state.selectedCategory = "bossMaterials";
+      }
+      $("#interface input[type=checkbox]").each(function(){
+        var id = $(this).attr("id");
+        state.selections[id] = $(this).prop("checked");
+      });
+      modeStates[mode] = state;
+    }
+
+    // Restore state for the given mode.
+    function restoreState(mode) {
+      var state = modeStates[mode];
+      if(state) {
+        $.each(state.selections, function(id, checked) {
+          $("#" + id).prop("checked", checked);
+        });
+        $(".sub-menu button").removeClass("selected");
+        $(".sub-menu button").each(function(){
+          if($(this).attr("data-target") === state.selectedCategory) {
+            $(this).addClass("selected");
+          }
+        });
+        $(".cat-panel").hide();
+        $("#" + mode + "_" + state.selectedCategory).show();
+      }
+    }
+
+    $(document).ready(function(){
+      // Season Button Events
+      $(".season-btn").on("click", function(){
+        $(".season-btn").removeClass("selected");
+        $(this).addClass("selected");
+      });
+      
+      // Mode Button Events
+      $("#modeBuy").on("click", function(){
+        if (!$(this).hasClass("selected")) {
+          storeState(currentMode);
+          $("#modeSell").removeClass("selected");
+          $(this).addClass("selected");
+          currentMode = "buy";
+          buildInterface("buy");
+          restoreState("buy");
+        }
+      });
+      $("#modeSell").on("click", function(){
+        if (!$(this).hasClass("selected")) {
+          storeState(currentMode);
+          $("#modeBuy").removeClass("selected");
+          $(this).addClass("selected");
+          currentMode = "sell";
+          buildInterface("sell");
+          restoreState("sell");
+        }
+      });
+      
+      // Build the interface for the given mode ("buy" or "sell")
+      function buildInterface(mode) {
+        var $container = $("#interface");
+        $container.removeClass("buy-mode sell-mode").addClass(mode + "-mode");
+        $container.empty();
+        
+        // Define the top-level submenu categories.
+        // For "buy" mode, include Equipment; for "sell" mode, omit Equipment.
+        var cats;
+        if(mode === "buy"){
+          cats = [
+            { key: "bossMaterials", label: "Boss Materials" },
+            { key: "equipment", label: "Equipment" },
+            { key: "gem", label: "Gem" },
+            { key: "rune", label: "Rune" },
+            { key: "summonSets", label: "Summon Sets" }
+          ];
+        } else {  // Sell mode
+          cats = [
+            { key: "bossMaterials", label: "Boss Materials" },
+            { key: "gem", label: "Gem" },
+            { key: "rune", label: "Rune" },
+            { key: "summonSets", label: "Summon Sets" }
+          ];
+        }
+        
+        var $subMenu = $("<div>").addClass("sub-menu");
+        cats.forEach(function(cat) {
+          var $btn = $("<button>").addClass("cat-btn")
+                      .text(cat.label)
+                      .attr("data-target", cat.key);
+          $subMenu.append($btn);
+        });
+        $container.append($subMenu);
+        
+        // Panels container
+        var $panelsContainer = $("<div>").addClass("panels-container");
+        cats.forEach(function(cat) {
+          var $panel = $("<div>").addClass("cat-panel").attr("id", mode + "_" + cat.key);
+          $panel.append($("<h2>").text(cat.label));
+          if(cat.key === "equipment"){
+            // Build the Equipment panel with three columns (all visible)
+            var $grid = $("<div>").addClass("equip-grid");
+            // Column 1: Equipment Type
+            var $colType = $("<div>").addClass("equip-col");
+            $colType.append($("<h3>").text("Equipment Type"));
+            optionsData.equipment.type.forEach(function(item) {
+              $colType.append(makeItem(mode + "_eqtype_" + item, item, "equipment_type"));
+            });
+            $grid.append($colType);
+            // Column 2: Rarity – two checkboxes: unique and legendary
+            var $colRarity = $("<div>").addClass("equip-col");
+            $colRarity.append($("<h3>").text("Rarity"));
+            ["unique", "legendary"].forEach(function(item) {
+              $colRarity.append(makeItem(mode + "_rarity_" + item, item, "rarity"));
+            });
+            $grid.append($colRarity);
+            // Column 3: Unique Items
+            var $colUnique = $("<div>").addClass("equip-col");
+            $colUnique.append($("<h3>").text("Unique Items"));
+            optionsData.equipment.unique.forEach(function(item) {
+              var id = mode + "_uniq_" + formatUniqueItem(item);
+              $colUnique.append(makeItem(id, item, "equipment_unique"));
+            });
+            $grid.append($colUnique);
+            $panel.append($grid);
+          } else {
+            // For non-equipment categories
+            optionsData[cat.key].forEach(function(item) {
+              var id = mode + "_" + cat.key.substr(0,2) + "_" + item.replace(/\W/g, "").toLowerCase();
+              var $it = makeItem(id, item);
+              $it.attr("data-cat", cat.key);
+              $panel.append($it);
+            });
+          }
+          // Append a submit button for this panel (for state reference)
+          $panel.append($("<button class='submit-btn'>").text("Submit").attr("data-cat", mode + "_" + cat.key));
+          $panelsContainer.append($panel);
+        });
+        $container.append($panelsContainer);
+      }
+      
+      // Helper: Create an .item element.
+      // Accept an optional category parameter.
+      function makeItem(id, text, cat) {
+        var $item = $("<div>").addClass("item").attr("data-name", text);
+        if(cat) { $item.attr("data-cat", cat); }
+        var $chk = $("<input type='checkbox'>").attr("id", id);
+        var $label = $("<label>").attr("for", id).text(text);
+        var $arrow = $("<button class='arrow'>").html("&#8594;").attr("data-item", id);
+        $item.append($chk).append($label).append($arrow);
+        return $item;
+      }
+      
+      // Initially build in buy mode (with season softcore auto-selected)
+      buildInterface("buy");
+      modeStates["buy"].selectedCategory = "bossMaterials";
+      
+      // Submenu Button Click (only one selected per interface)
+      $(document).on("click", ".sub-menu button", function(){
+        $(this).siblings().removeClass("selected");
+        $(this).addClass("selected");
+        modeStates[currentMode].selectedCategory = $(this).attr("data-target");
+        var target = $(this).attr("data-target");
+        $(".cat-panel").slideUp();
+        $("#" + currentMode + "_" + target).slideDown();
+      });
+      
+      // Item Click (if not clicking the arrow, toggle the checkbox)
+      $(document).on("click", ".item", function(e){
+        if (!$(e.target).hasClass("arrow")) {
+          var $chk = $(this).find("input[type=checkbox]");
+          $chk.prop("checked", !$chk.prop("checked"));
+          modeStates[currentMode].selections[$chk.attr("id")] = $chk.prop("checked");
+        }
+      });
+      
+      // Arrow Button Click: Open link in new tab for that option
+      $(document).on("click", ".arrow", function(e){
+        e.stopPropagation();
+        var $item = $(this).closest(".item");
+        var cat = $item.attr("data-cat"); // e.g., "bossMaterials", "equipment_type", "rarity", or "equipment_unique"
+        var paramName = paramMapping[cat];
+        var value = $item.attr("data-name");
+        if(cat === "equipment_unique") {
+          value = formatUniqueItem(value);
+        }
+        var season = encodeURIComponent($(".season-btn.selected").text());
+        var tradeType = $("#interface").hasClass("buy-mode") ? "WTB" : "WTS";
+        var url = "https://diablo.trade/listings/items?cursor=1&" + paramName + "=" + encodeURIComponent(value) + "&mode=" + season + "&type=" + tradeType;
+        window.open(url, "_blank");
+      });
+      
+      // Submit Button Click: Gather selections from the currently visible panel only and open in new tab.
+      $(document).on("click", ".submit-btn", function(){
+        var $panel = $(".cat-panel:visible");
+        var params = {};
+        $panel.find("input[type=checkbox]:checked").each(function(){
+          var $item = $(this).closest(".item");
+          var cat = $item.attr("data-cat");
+          var value = $item.attr("data-name");
+          if(cat === "equipment_unique") {
+            value = formatUniqueItem(value);
+          }
+          if (!params[cat]) { params[cat] = []; }
+          params[cat].push(value);
+        });
+        var queryParts = ["cursor=1"];
+        $.each(params, function(cat, arr){
+          var paramName = paramMapping[cat];
+          if(paramName) {
+            queryParts.push(paramName + "=" + encodeURIComponent(arr.join(",")));
+          }
+        });
+        var season = encodeURIComponent($(".season-btn.selected").text());
+        queryParts.push("mode=" + season);
+        var tradeType = $("#interface").hasClass("buy-mode") ? "WTB" : "WTS";
+        queryParts.push("type=" + tradeType);
+        var url = "https://diablo.trade/listings/items?" + queryParts.join("&");
+        window.open(url, "_blank");
+      });
+      
+      // Store state before unload.
+      $(window).on("beforeunload", function(){
+        storeState(currentMode);
+      });
+    });
+  </script>
+</body>
+</html>
